@@ -1,0 +1,6 @@
+{
+  "name": "Rua do Hexa",
+  "description": "Plataforma social para ruas, condomínios e bairros participarem da Copa do Mundo através de arrecadações, rede social, bolão, galeria e inteligência artificial.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
