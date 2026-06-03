@@ -34,7 +34,11 @@ import {
   Ticket,
   HelpCircle,
   Grid,
-  Settings
+  Settings,
+  Trash2,
+  LogOut,
+  Bell,
+  ShieldAlert
 } from "lucide-react";
 import { triggerRealtimeNotification } from "./RealtimeNotificationSystem";
 import ArrecadacaoModule from "./ArrecadacaoModule";
@@ -136,6 +140,76 @@ export default function CopaGenZApp() {
   const [supabaseLoading, setSupabaseLoading] = useState(false);
   const [supabaseErrorMsg, setSupabaseErrorMsg] = useState<string | null>(null);
   const [showSqlScript, setShowSqlScript] = useState(false);
+
+  // --- ADMIN PANEL STATES & OPERATIONS ---
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [activeAdminSubTab, setActiveAdminSubTab] = useState<"geral" | "posts" | "votos" | "logs">("geral");
+  
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+
+  const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
+  const [adminNotificationDesc, setAdminNotificationDesc] = useState("");
+  const [adminNotificationType, setAdminNotificationType] = useState<"novo_post" | "meta_alcancada">("meta_alcancada");
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminUsername === "Cladston" && adminPassword === "@Senha123!") {
+      setIsAdminLoggedIn(true);
+      setShowAdminLoginModal(false);
+      setShowAdminPanel(true);
+      setAdminError("");
+      addDbLog("ADMIN LOGIN: Usuário 'Cladston' autenticado com sucesso no painel master.");
+      triggerRealtimeNotification({
+        type: "meta_alcancada",
+        title: "🔑 Admin Conectado!",
+        description: "Bem-vindo de volta ao centro de operações, Cladston!",
+        metadata: { user: "Cladston" }
+      });
+    } else {
+      setAdminError("Credenciais inválidas! Tente novamente.");
+      addDbLog("ADMIN LOGIN FAILED: Tentativa inválida de login administrativo.");
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    setShowAdminPanel(false);
+    setAdminUsername("");
+    setAdminPassword("");
+    addDbLog("ADMIN LOGOUT: Conexão administrativa encerrada.");
+  };
+
+  const deletePost = async (postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    addDbLog(`DELETE FROM public.posts WHERE id = '${postId}';`);
+    try {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) {
+        addDbLog(`SUPABASE DELETE WARNING: ${error.message} (Post removido localmente)`);
+      } else {
+        addDbLog(`SUPABASE INFO: Post ${postId} removido fisicamente do banco de dados.`);
+      }
+    } catch (err: any) {
+      addDbLog(`SUPABASE DELETE ERROR: ${err.message}`);
+    }
+  };
+
+  const broadcastAdminAlert = () => {
+    if (!adminNotificationTitle.trim()) return;
+    triggerRealtimeNotification({
+      type: adminNotificationType,
+      title: `⚡ [ALERT MASTER] ${adminNotificationTitle}`,
+      description: adminNotificationDesc || "Aviso oficial da equipe de coordenação administrativa da gincana.",
+      metadata: { user: "Admin", linkView: "social" }
+    });
+    addDbLog(`BROADCAST NOTIFICATION: "${adminNotificationTitle}" enviada a todos os moradores.`);
+    setAdminNotificationTitle("");
+    setAdminNotificationDesc("");
+  };
 
   const testSupabaseConnection = async () => {
     try {
@@ -815,6 +889,28 @@ export default function CopaGenZApp() {
               >
                 <span className="text-sm">⚽</span>
                 <span className="font-extrabold text-[9px] tracking-wider uppercase">CONFETES</span>
+              </button>
+            </div>
+
+            {/* Admin Settings Button */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  if (isAdminLoggedIn) {
+                    setShowAdminPanel(true);
+                  } else {
+                    setShowAdminLoginModal(true);
+                  }
+                }}
+                className={`px-2.5 py-2 rounded-xl cursor-pointer text-xs flex items-center gap-1.5 transition-all outline-none border ${
+                  isAdminLoggedIn
+                    ? "bg-indigo-600 border-indigo-400 text-white font-extrabold shadow-lg animate-pulse animate-duration-1000"
+                    : "bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
+                }`}
+                title="Painel Administrativo"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span className="font-extrabold text-[9px] tracking-wider uppercase">Configurar</span>
               </button>
             </div>
           </div>
@@ -2244,6 +2340,430 @@ export default function CopaGenZApp() {
         </button>
 
       </nav>
+
+      {/* =========================================================================
+          🔑 MODAL 1: LOGIN ADMINISTRATIVO (Mestre Cladston)
+         ========================================================================= */}
+      <AnimatePresence>
+        {showAdminLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" id="admin-login-modal">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-sm bg-slate-900 border-2 border-indigo-500/30 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/20 to-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex flex-col items-center text-center space-y-4 relative z-10">
+                <span className="p-3.5 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 shadow-inner">
+                  <Lock className="w-6 h-6 text-indigo-400" />
+                </span>
+                
+                <div>
+                  <h3 className="font-black text-lg uppercase tracking-tight">Login Master</h3>
+                  <p className="text-xs text-indigo-300 font-mono mt-0.5">COORDENAÇÃO ADMINISTRATIVA</p>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed font-sans px-2">
+                  Esta área é restrita a supervisores para auditoria das ruas, moderação do mural em tempo real e atualização dos índices.
+                </p>
+
+                <form onSubmit={handleAdminLogin} className="w-full space-y-3.5 pt-2">
+                  <div className="text-left space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 font-mono block">Nome do Usuário</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      placeholder="Ex: Cladston" 
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all font-sans"
+                    />
+                  </div>
+
+                  <div className="text-left space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 font-mono block">Senha de Acesso</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="••••••••••••" 
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-indigo-200 placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all font-mono"
+                    />
+                  </div>
+
+                  {adminError && (
+                    <div className="text-xs text-center font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2 rounded-xl">
+                      ⚠️ {adminError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setShowAdminLoginModal(false);
+                        setAdminError("");
+                      }}
+                      className="flex-1 border border-slate-800 hover:bg-slate-850 active:scale-95 text-slate-350 font-bold py-2.5 rounded-xl text-xs transition-all cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-550 hover:from-indigo-550 hover:to-indigo-500 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-lg active:scale-95 transition-all cursor-pointer"
+                    >
+                      Entrar 🚀
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* =========================================================================
+          🔥 MODAL 2: PAINEL ADMINISTRATIVO MASTER (Dashboard Cladston)
+         ========================================================================= */}
+      <AnimatePresence>
+        {showAdminPanel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" id="admin-panel-dashboard">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-slate-900 border-2 border-indigo-500/35 rounded-3xl p-5 text-white shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden"
+            >
+              {/* Header do Painel Admin */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400">
+                    <ShieldAlert className="w-5 h-5" />
+                  </span>
+                  <div className="text-left">
+                    <h2 className="font-black text-sm uppercase tracking-wider text-slate-100">Controle Master</h2>
+                    <p className="text-[10px] text-zinc-400 font-mono mt-0.5">Sessão: Cladston (Ativa) 👑</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleAdminLogout}
+                    className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-550/30 text-rose-450 text-rose-400 rounded-xl cursor-pointer active:scale-95 transition-all text-xs flex items-center gap-1 font-bold"
+                    title="Sair da sessão"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="text-[10px] uppercase font-black">Sair</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowAdminPanel(false)}
+                    className="p-2 hover:bg-slate-800 rounded-xl border border-slate-800 text-slate-400 cursor-pointer text-xs"
+                  >
+                     ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-abas de navegação do painel */}
+              <div className="flex border-b border-slate-800 bg-slate-950/50 p-1 rounded-xl mt-3 shrink-0 justify-around items-center gap-1">
+                {[
+                  { id: "geral", label: "📢 Geral" },
+                  { id: "posts", label: "📸 Mural" },
+                  { id: "votos", label: "🏆 Gincana" },
+                  { id: "logs", label: "💾 SQL Logs" }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveAdminSubTab(tab.id as any)}
+                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                      activeAdminSubTab === tab.id
+                        ? "bg-indigo-650 bg-indigo-600 text-white shadow"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-slate-850"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Conteúdo da Área Administrativa */}
+              <div className="flex-1 py-4 overflow-y-auto space-y-4 min-h-0 text-left">
+                
+                {/* 1. ABA GERAL */}
+                {activeAdminSubTab === "geral" && (
+                  <div className="space-y-4 animate-fade-in text-xs leading-normal">
+                    {/* Altera Frase do Mascote */}
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base text-yellow-400">🦜</span>
+                        <h4 className="font-extrabold uppercase tracking-tight text-indigo-300 text-[11px]">Balão do Mascote</h4>
+                      </div>
+                      <p className="text-[10px] text-zinc-400">Atualize a mensagem do canarinho na página inicial instântaneamente para todos moradores.</p>
+                      
+                      <div className="flex gap-2">
+                        <textarea
+                          rows={2}
+                          value={mascoteMessage}
+                          onChange={(e) => setMascoteMessage(e.target.value)}
+                          placeholder="Digite o comunicado do mascote..."
+                          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-zinc-650 outline-none focus:border-indigo-500 font-sans resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Countdown Ajustador */}
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-teal-400" />
+                        <h4 className="font-extrabold uppercase tracking-tight text-teal-300 text-[11px]">Temporizador do Próximo Jogo</h4>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400 font-mono">Dias do timer atual: <strong className="text-white text-xs">{timeLeft.dias} dias</strong></span>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => setTimeLeft(prev => ({ ...prev, dias: Math.max(0, prev.dias - 1) }))}
+                            className="bg-slate-800 hover:bg-slate-750 font-bold px-2.5 py-1 rounded text-white"
+                          >
+                            -1d
+                          </button>
+                          <button
+                            onClick={() => setTimeLeft(prev => ({ ...prev, dias: prev.dias + 1 }))}
+                            className="bg-slate-800 hover:bg-slate-750 font-bold px-2.5 py-1 rounded text-white"
+                          >
+                            +1d
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Disparar Notificação Alerta */}
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-indigo-500/20 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-3.5 h-3.5 text-indigo-400" />
+                        <h4 className="font-extrabold uppercase tracking-tight text-indigo-300 text-[11px]">Disparar Alerta na Gincana</h4>
+                      </div>
+                      <p className="text-[10px] text-zinc-405 text-zinc-400 leading-normal">
+                        Envia uma notificação flutuante importante em tempo real que surge no topo da tela de todos os usuários simulados.
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <input
+                          type="text"
+                          value={adminNotificationTitle}
+                          onChange={(e) => setAdminNotificationTitle(e.target.value)}
+                          placeholder="Mudar guia da rua..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs"
+                        />
+                        <select
+                          value={adminNotificationType}
+                          onChange={(e: any) => setAdminNotificationType(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs"
+                        >
+                          <option value="meta_alcancada">🏆 Notícia Boa</option>
+                          <option value="novo_post">🔥 Alerta Geral</option>
+                        </select>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={adminNotificationDesc}
+                        onChange={(e) => setAdminNotificationDesc(e.target.value)}
+                        placeholder="Mensagem do aviso administrativo..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2.5 text-xs text-white"
+                      />
+
+                      <button
+                        onClick={broadcastAdminAlert}
+                        disabled={!adminNotificationTitle.trim()}
+                        className="w-full bg-indigo-650 hover:bg-indigo-600 bg-indigo-600 text-white py-2 rounded-xl text-xs font-black cursor-pointer uppercase active:scale-[98] disabled:opacity-50 disabled:pointer-events-none transition-all"
+                      >
+                        Disparar Boletim Oficial 🚨
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. ABA POSTS / FEED moderation */}
+                {activeAdminSubTab === "posts" && (
+                  <div className="space-y-3.5 animate-fade-in text-xs">
+                    <div className="flex items-center justify-between text-[11px] pb-1">
+                      <span className="text-zinc-400 font-bold uppercase tracking-wider">Posts no Mural ({posts.length})</span>
+                      <span className="text-indigo-400 font-mono font-bold">MODERAÇÃO ATIVA</span>
+                    </div>
+
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                      {posts.length === 0 ? (
+                        <div className="text-center py-8 text-zinc-500 bg-slate-950 rounded-2xl border border-slate-850">
+                          Nenhum post ativo para moderar.
+                        </div>
+                      ) : (
+                        posts.map(post => (
+                          <div key={post.id} className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between gap-3" id={`moderation-item-${post.id}`}>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {post.imagem ? (
+                                <img src={post.imagem} alt="Thumb" className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-800" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="w-10 h-10 bg-slate-850 rounded-lg shrink-0 flex items-center justify-center font-bold text-lg text-indigo-400">📝</span>
+                              )}
+                              
+                              <div className="text-left min-w-0 leading-normal">
+                                <h5 className="font-extrabold text-white text-[11px] truncate flex items-center gap-1.5">
+                                  {post.autor} <span className="text-[9px] font-medium text-emerald-400 bg-emerald-500/10 px-1 py-0.25 rounded font-mono">{post.rua}</span>
+                                </h5>
+                                <p className="text-[10px] text-zinc-400 truncate max-w-[200px]">{post.legenda || "Sem legenda."}</p>
+                                <span className="text-[9px] text-zinc-500 font-mono block">Likes: {post.curtidas} • Comentários: {post.comentarios.length}</span>
+                              </div>
+                            </div>
+
+                            <button 
+                              onClick={() => deletePost(post.id)}
+                              className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl cursor-pointer hover:border border-rose-500/20 active:scale-90 transition-all font-bold text-[10px] uppercase flex items-center gap-1"
+                              title="Remover do mural público"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="sr-only">Remover</span>
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. ABA GINCANA / VOTOS */}
+                {activeAdminSubTab === "votos" && (
+                  <div className="space-y-4 animate-fade-in text-xs">
+                    
+                    {/* Torcidômetro Cliques */}
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-850 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">🥁</span>
+                          <h4 className="font-extrabold uppercase tracking-tight text-yellow-400 text-[11px]">Torcidômetro (Cliques do Tambor)</h4>
+                        </div>
+                        <span className="text-[10px] text-zinc-500 font-mono">BETA</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {Object.entries(ruaPontos).map(([rua, pontos]) => (
+                          <div key={rua} className="flex justify-between items-center text-zinc-300 font-mono text-[11px] bg-slate-900 px-3 py-2 rounded-xl">
+                            <span>{rua}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-extrabold">{pontos} pts</span>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => setRuaPontos(prev => ({ ...prev, [rua]: Math.max(0, prev[rua] - 100) }))}
+                                  className="bg-slate-850 px-1.5 py-0.5 rounded text-[10px] font-black text-rose-450 text-rose-400"
+                                >
+                                  -100
+                                </button>
+                                <button
+                                  onClick={() => setRuaPontos(prev => ({ ...prev, [rua]: prev[rua] + 100 }))}
+                                  className="bg-slate-850 px-1.5 py-0.5 rounded text-[10px] font-black text-emerald-450 text-emerald-400"
+                                >
+                                  +100
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Votação de Candidatos Concurso */}
+                    <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-850 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5">
+                          <Award className="w-3.5 h-3.5 text-indigo-400" />
+                          <h4 className="font-extrabold uppercase tracking-tight text-indigo-300 text-[11px]">Candidatos da Gincana ({concursoCandidatos.length})</h4>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {concursoCandidatos.map(cand => (
+                          <div key={cand.id} className="bg-slate-900 p-2.5 rounded-xl border border-slate-850 flex items-center justify-between gap-2.5">
+                            <div className="text-left leading-tight min-w-0">
+                              <span className="text-[8px] bg-indigo-500/10 text-indigo-400 px-1 rounded uppercase font-bold font-mono block w-fit mb-0.5">{cand.categoria}</span>
+                              <h6 className="font-bold text-white text-[10px] truncate">{cand.titulo}</h6>
+                              <p className="text-[9px] text-zinc-500 truncate">{cand.autor} • {cand.rua}</p>
+                            </div>
+
+                            <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
+                              <span className="font-black text-white">{cand.votos} vt</span>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => setConcursoCandidatos(prev => prev.map(c => c.id === cand.id ? { ...c, votos: Math.max(0, c.votos - 25) } : c))}
+                                  className="bg-slate-800 px-1.5 py-1 rounded text-[9px] font-black text-rose-400"
+                                >
+                                  -25
+                                </button>
+                                <button
+                                  onClick={() => setConcursoCandidatos(prev => prev.map(c => c.id === cand.id ? { ...c, votos: c.votos + 25 } : c))}
+                                  className="bg-slate-800 px-1.5 py-1 rounded text-[9px] font-black text-emerald-400"
+                                >
+                                  +25
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* 4. ABA SQL LOGS TERMINAL */}
+                {activeAdminSubTab === "logs" && (
+                  <div className="space-y-3.5 animate-fade-in text-[11px] leading-normal font-mono flex flex-col h-full">
+                    <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-850 shrink-0">
+                      <span className="text-zinc-500">TAMANHO HISTÓRICO: {dbLogs.length} / 15</span>
+                      <button 
+                        onClick={() => {
+                          addDbLog("RESET SCHEMA TRUNCATE: Logs e transações de rede resetadas.");
+                        }}
+                        className="bg-slate-900 hover:bg-slate-850 text-[9px] font-black text-zinc-300 px-2 py-1 rounded border border-slate-800 cursor-pointer"
+                      >
+                        Zerar Registro
+                      </button>
+                    </div>
+
+                    <div className="flex-1 bg-black/90 p-3 rounded-2xl border border-indigo-500/25 min-h-[160px] max-h-80 overflow-y-auto leading-relaxed select-all text-indigo-300 pr-1 space-y-2">
+                      {dbLogs.length === 0 ? (
+                        <div className="text-center py-10 text-zinc-600">
+                          &gt;_ terminal vazio. sem transações nesta sessão.
+                        </div>
+                      ) : (
+                        dbLogs.map((log) => (
+                          <div key={log.id} className="border-b border-zinc-900 pb-1.5">
+                            <span className="text-[9px] text-[#22c55e] font-extrabold font-mono font-black">[ {log.stamp} ] REDE &gt;</span>
+                            <div className="text-[9.5px] leading-relaxed break-all font-mono pl-1 text-[#60a5fa] mt-0.5">{log.sql}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="p-2 bg-slate-950 rounded-xl text-[9px] text-zinc-500 leading-normal border border-slate-850">
+                      💡 Todos os selects, updates e inserts mapeados mostram a simulação das querys reais rodando tanto no cliente quanto no middleware persistido Supabase.
+                    </div>
+                  </div>
+                )}
+
+              </div>
+              
+              {/* Footer do Painel Admin */}
+              <div className="border-t border-slate-800 pt-3 flex items-center justify-between shrink-0 text-[10px] text-zinc-500 font-mono">
+                <span>CONEXÃO: SUPABASE CLOUD</span>
+                <span className="text-indigo-400 font-bold">@Senha123!</span>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
