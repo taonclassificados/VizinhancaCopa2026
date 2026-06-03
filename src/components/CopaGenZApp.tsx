@@ -876,24 +876,25 @@ export default function CopaGenZApp() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Soccer Match Ball inspired Button */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 onClick={() => setShowConfetti(!showConfetti)}
-                className={`px-2.5 py-2 rounded-xl cursor-pointer text-xs flex items-center gap-1.5 transition-all outline-none border ${
+                className={`p-2 sm:px-2.5 sm:py-2 rounded-xl cursor-pointer text-xs flex items-center gap-1.5 transition-all outline-none border ${
                   showConfetti 
                     ? "bg-yellow-400 border-yellow-300 text-slate-900 font-extrabold shadow-lg scale-105" 
                     : "bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
                 }`}
+                title="Ativar Confetes"
               >
                 <span className="text-sm">⚽</span>
-                <span className="font-extrabold text-[9px] tracking-wider uppercase">CONFETES</span>
+                <span className="hidden sm:inline font-extrabold text-[9px] tracking-wider uppercase">CONFETES</span>
               </button>
             </div>
 
             {/* Admin Settings Button */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 onClick={() => {
                   if (isAdminLoggedIn) {
@@ -902,15 +903,15 @@ export default function CopaGenZApp() {
                     setShowAdminLoginModal(true);
                   }
                 }}
-                className={`px-2.5 py-2 rounded-xl cursor-pointer text-xs flex items-center gap-1.5 transition-all outline-none border ${
+                className={`p-2 sm:px-2.5 sm:py-2 rounded-xl cursor-pointer text-xs flex items-center gap-1.5 transition-all outline-none border ${
                   isAdminLoggedIn
-                    ? "bg-indigo-600 border-indigo-400 text-white font-extrabold shadow-lg animate-pulse animate-duration-1000"
+                    ? "bg-indigo-600 border-indigo-400 text-white font-extrabold shadow-lg animate-pulse"
                     : "bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
                 }`}
-                title="Painel Administrativo"
+                title="Configurar Painel Administrativo"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span className="font-extrabold text-[9px] tracking-wider uppercase">Configurar</span>
+                <span className="hidden sm:inline font-extrabold text-[9px] tracking-wider uppercase">Configurar</span>
               </button>
             </div>
           </div>
