@@ -14,6 +14,7 @@ import {
   MessageCircle, 
   Send, 
   User, 
+  UserPlus,
   Check, 
   Lock, 
   Unlock, 
@@ -104,6 +105,19 @@ export default function CopaGenZApp() {
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const [profileSubTab, setProfileSubTab] = useState<"posts" | "conquistas">("posts");
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showAddTorcedor, setShowAddTorcedor] = useState(false);
+  const [newTorcedorName, setNewTorcedorName] = useState("");
+  const [newTorcedorRua, setNewTorcedorRua] = useState("Rua Alagoas");
+  const [newTorcedorAvatar, setNewTorcedorAvatar] = useState("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80");
+  const [torcedoresCadastrados, setTorcedoresCadastrados] = useState<{ nickname: string; rua_origem: string; avatar_url: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem("copagenz_torcedores");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      { nickname: "Vini-Da-Rua2", rua_origem: "Rua Alagoas", avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" }
+    ];
+  });
   const [userAvatar, setUserAvatar] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80");
   const [selectedGridPost, setSelectedGridPost] = useState<FeedPost | null>(null);
   const [showConfetti, setShowConfetti] = useState(true);
@@ -1892,13 +1906,37 @@ export default function CopaGenZApp() {
 
               {/* Edit Profile Button & Collapsible Container */}
               <div className="space-y-3 pt-1">
-                <button
-                  onClick={() => setShowEditProfile(!showEditProfile)}
-                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-205 border border-slate-200 text-slate-800 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-slate-600" />
-                  <span>{showEditProfile ? "Fechar Edição" : "Editar Perfil"}</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setShowEditProfile(!showEditProfile);
+                      setShowAddTorcedor(false);
+                    }}
+                    className={`w-full py-2.5 border text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      showEditProfile 
+                        ? "bg-slate-800 border-slate-700 text-white animate-none" 
+                        : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
+                    }`}
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>{showEditProfile ? "Fechar" : "Editar"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowAddTorcedor(!showAddTorcedor);
+                      setShowEditProfile(false);
+                    }}
+                    className={`w-full py-2.5 border text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
+                      showAddTorcedor
+                        ? "bg-emerald-800 border-emerald-700 text-white font-extrabold"
+                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-105 border-emerald-500/30 text-white font-extrabold"
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Cadastrar</span>
+                  </button>
+                </div>
 
                 <AnimatePresence>
                   {showEditProfile && (
@@ -1976,6 +2014,170 @@ export default function CopaGenZApp() {
                         Salvar Alterações 💾
                       </button>
 
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {showAddTorcedor && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden bg-emerald-50/40 border border-emerald-200/50 rounded-2xl p-4 space-y-4 text-left"
+                    >
+                      <div className="flex items-center gap-1.5 pb-1 border-b border-emerald-100">
+                        <span className="text-sm">🇧🇷</span>
+                        <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest font-sans">
+                          Cadastrar Novo Torcedor
+                        </h4>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <label className="text-[10px] uppercase font-black text-emerald-700/85 font-mono">Apelido do Torcedor (sem espaços):</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={newTorcedorName} 
+                          onChange={(e) => setNewTorcedorName(e.target.value)}
+                          className="w-full bg-white border border-slate-250 rounded-xl px-3 py-2 text-slate-800 font-bold focus:outline-emerald-500 font-sans"
+                          placeholder="Ex: PedroDoHexa, BiaCanarinha..."
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <label className="text-[10px] uppercase font-black text-emerald-700/85 font-mono">Sua Rua (QG de Origem):</label>
+                        <select
+                          value={newTorcedorRua}
+                          onChange={(e) => setNewTorcedorRua(e.target.value)}
+                          className="w-full bg-white border border-slate-250 rounded-xl px-3 py-2 text-slate-800 font-bold focus:outline-emerald-500 font-sans cursor-pointer"
+                        >
+                          <option value="Rua Alagoas">Rua Alagoas</option>
+                          <option value="Rua da Pátria">Rua da Pátria</option>
+                          <option value="Avenida Brasil">Avenida Brasil</option>
+                          <option value="Travessa Canarinho">Travessa Canarinho</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-black text-emerald-700/85 font-mono block">Escolha o Avatar da Copa:</label>
+                        <div className="flex flex-wrap gap-2 py-1">
+                          {[
+                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+                            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+                            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
+                            "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80",
+                            "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80",
+                            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+                          ].map((imgUrl, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setNewTorcedorAvatar(imgUrl)}
+                              className={`w-10 h-10 rounded-full overflow-hidden border-2 transition-all shrink-0 ${
+                                newTorcedorAvatar === imgUrl ? "border-emerald-500 scale-110 ring-2 ring-emerald-100" : "border-slate-200 opacity-70 hover:opacity-100"
+                              }`}
+                            >
+                              <img src={imgUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const cleanName = newTorcedorName.trim().replace(/\s+/g, "");
+                          if (!cleanName) {
+                            alert("Por favor, preencha o apelido do torcedor!");
+                            return;
+                          }
+                          
+                          const newProfile = {
+                            nickname: cleanName,
+                            rua_origem: newTorcedorRua,
+                            avatar_url: newTorcedorAvatar
+                          };
+
+                          // Salvar na lista local
+                          const updatedList = [...torcedoresCadastrados.filter(t => t.nickname !== cleanName), newProfile];
+                          setTorcedoresCadastrados(updatedList);
+                          localStorage.setItem("copagenz_torcedores", JSON.stringify(updatedList));
+
+                          // Acessar imediatamente o perfil no aplicativo
+                          setCurrentUser(cleanName);
+                          setCurrentRua(newTorcedorRua);
+                          setUserAvatar(newTorcedorAvatar);
+
+                          setShowAddTorcedor(false);
+                          setNewTorcedorName("");
+
+                          // Notificar
+                          triggerRealtimeNotification({
+                            type: "meta_alcancada",
+                            title: "✨ Torcedor Conectado!",
+                            description: `O perfil de @${cleanName} foi cadastrado e está ativo no aplicativo.`,
+                            metadata: { user: cleanName }
+                          });
+
+                          // Log no terminal do Mestre Cladston
+                          addDbLog(`INSERT INTO public.profiles (nickname, rua_origem, avatar_url) VALUES ('${cleanName}', '${newTorcedorRua}', '${newTorcedorAvatar}');`);
+                          
+                          // Gravação no Supabase Real
+                          try {
+                            supabase.from("profiles").upsert({
+                              auth_uid: `usr_${cleanName.toLowerCase()}`,
+                              nickname: cleanName,
+                              rua_origem: newTorcedorRua,
+                              avatar_url: newTorcedorAvatar
+                            }).then(({ error }) => {
+                              if (error) {
+                                addDbLog(`SUPABASE PROFILE WARNING: ${error.message} (Gravado na sessão local)`);
+                              } else {
+                                addDbLog(`SUPABASE SUCCESS: Perfil @${cleanName} sincronizado na nuvem.`);
+                              }
+                            });
+                          } catch (err: any) {
+                            addDbLog(`SUPABASE API ERROR: ${err.message}`);
+                          }
+                        }}
+                        className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-105 text-white font-heavy font-sans font-black uppercase text-[10px] tracking-widest rounded-xl cursor-pointer shadow-md active:scale-98 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>Concluir Cadastro & Acessar 🚀</span>
+                      </button>
+
+                      {/* Alternância Rápida entre perfis cadastrados */}
+                      {torcedoresCadastrados.length > 0 && (
+                        <div className="pt-2 border-t border-emerald-100/60 mt-2 space-y-1.5">
+                          <p className="text-[9px] font-black uppercase text-emerald-800/60 tracking-wider">Mudar para Perfil Cadastrado:</p>
+                          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                            {torcedoresCadastrados.map((torc, index) => (
+                              <button
+                                key={index}
+                                onClick={() => {
+                                  setCurrentUser(torc.nickname);
+                                  setCurrentRua(torc.rua_origem);
+                                  setUserAvatar(torc.avatar_url);
+                                  triggerRealtimeNotification({
+                                    type: "meta_alcancada",
+                                    title: "🔄 Perfis Trocados!",
+                                    description: `Você acessou o perfil de @${torc.nickname}!`,
+                                    metadata: { user: torc.nickname }
+                                  });
+                                  addDbLog(`SWITCH PROFILE SESSÃO: @${torc.nickname} ativo.`);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                  currentUser === torc.nickname
+                                    ? "bg-emerald-600 border-emerald-500 text-white animate-none"
+                                    : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                                }`}
+                              >
+                                <img src={torc.avatar_url} className="w-3.5 h-3.5 rounded-full object-cover" referrerPolicy="no-referrer" />
+                                <span>@{torc.nickname}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
